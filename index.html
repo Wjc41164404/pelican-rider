@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>鹈鹕骑行 · Pelican Rider 3D</title>
+<meta name="description" content="一只戴头盔的鹈鹕在海岸黄昏公路上骑自行车 —— 可交互的 Three.js 3D 剧场,支持轨道视角、氛围主题与实时参数调节。">
+<meta name="theme-color" content="#0e1a2b">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%230e1a2b'/%3E%3Cpath d='M9 12c3-4 8-4 10-1l7 3-7 2c-1 4-6 5-9 2z' fill='%23f5efe0'/%3E%3Cpath d='M19 14l7 1-6 3z' fill='%23ff9e2c'/%3E%3Ccircle cx='13' cy='12' r='1.4' fill='%230e1a2b'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.js",
+    "three/addons/": "./vendor/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="stage" aria-label="3D 场景:鹈鹕骑自行车"></div>
+<div class="vignette" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="hud-top">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+      <circle cx="24" cy="24" r="22" fill="none" stroke="currentColor" stroke-width="2" opacity=".4"/>
+      <path d="M13 19c4.5-6.5 12-6.5 15-2l11 4.5-11 3c-1.5 6-9 7.5-13.5 3z" fill="#f5efe0"/>
+      <path d="M28 21.5l11 1-9.5 4.5z" fill="#ff9e2c"/>
+      <circle cx="19.5" cy="19" r="2" fill="#0e1a2b"/>
+      <path d="M10 34h28M14 34l4-6m16 6l-4-6" stroke="#39d0d8" stroke-width="2" stroke-linecap="round" fill="none"/>
+    </svg>
+    <div class="brand-text">
+      <h1>鹈鹕骑行</h1>
+      <p>PELICAN RIDER · 海岸公路 3D 剧场</p>
+    </div>
+  </div>
+  <div class="top-actions">
+    <button id="soundBtn" class="icon-btn" aria-label="音效开关" aria-pressed="true" title="音效 (风声 / 链条 / 车铃)">
+      <svg viewBox="0 0 24 24" class="ico-sound-on"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+      <svg viewBox="0 0 24 24" class="ico-sound-off"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 9l6 6M22 9l-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span id="soundLabel">音效开</span>
+    </button>
+    <button id="pauseBtn" class="icon-btn" aria-label="暂停或继续骑行" aria-pressed="false" title="暂停 / 继续 (空格)">
+      <svg viewBox="0 0 24 24" class="ico-pause"><path d="M8 5v14M16 5v14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+      <svg viewBox="0 0 24 24" class="ico-play"><path d="M8 5l11 7-11 7z" fill="currentColor"/></svg>
+      <span id="pauseLabel">暂停</span>
+    </button>
+  </div>
+</header>
+
+<aside id="panel" aria-label="骑行控制台">
+  <div class="panel-head">
+    <span class="panel-dot" aria-hidden="true"></span>
+    <h2>骑行控制台</h2>
+    <span class="panel-sub">LIVE</span>
+  </div>
+  <div class="panel-scroll">
+
+    <section>
+      <h3>骑行</h3>
+      <div class="row">
+        <label for="speed">巡航速度</label><output id="speedVal">1.00×</output>
+        <input type="range" id="speed" min="0" max="2" step="0.01" value="1">
+      </div>
+      <div class="row">
+        <label for="flap">翅膀扇动</label><output id="flapVal">1.00×</output>
+        <input type="range" id="flap" min="0" max="2" step="0.01" value="1">
+      </div>
+      <button id="bellBtn" class="btn-accent">
+        <svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 00-6 6v4l-2 3h16l-2-3V9a6 6 0 00-6-6zm-2 15a2 2 0 004 0" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>
+        按车铃 <kbd>B</kbd>
+      </button>
+    </section>
+
+    <section>
+      <h3>氛围</h3>
+      <div class="row row-inline">
+        <label for="theme">时刻</label>
+        <select id="theme">
+          <option value="dusk" selected>黄昏 · 金色海岸</option>
+          <option value="night">夜晚 · 萤火公路</option>
+          <option value="day">白昼 · 碧海晴天</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="sun">日光强度</label><output id="sunVal">1.00×</output>
+        <input type="range" id="sun" min="0" max="2.5" step="0.01" value="1">
+      </div>
+      <div class="row">
+        <label for="bloom">泛光辉晕</label><output id="bloomVal">28%</output>
+        <input type="range" id="bloom" min="0" max="1.6" step="0.01" value="0.45">
+      </div>
+      <div class="row">
+        <label for="fog">海雾浓度</label><output id="fogVal">28%</output>
+        <input type="range" id="fog" min="0" max="0.045" step="0.0005" value="0.0126">
+      </div>
+      <div class="row">
+        <label for="particles">漂浮微粒</label><output id="particlesVal">320</output>
+        <input type="range" id="particles" min="0" max="600" step="10" value="320">
+      </div>
+    </section>
+
+    <section>
+      <h3>外观</h3>
+      <div class="row row-inline">
+        <label for="frameColor">车架涂装</label>
+        <input type="color" id="frameColor" value="#ff6b4a">
+      </div>
+      <div class="row row-inline">
+        <label for="scarfColor">围巾</label>
+        <input type="color" id="scarfColor" value="#ffd166">
+      </div>
+      <div class="row row-toggle">
+        <label for="headlight">复古车灯</label>
+        <span class="switch"><input type="checkbox" id="headlight" checked><i></i></span>
+      </div>
+      <div class="row row-toggle">
+        <label for="wireframe">线框透视</label>
+        <span class="switch"><input type="checkbox" id="wireframe"><i></i></span>
+      </div>
+      <div class="row row-toggle">
+        <label for="autorotate">自动环绕</label>
+        <span class="switch"><input type="checkbox" id="autorotate" checked><i></i></span>
+      </div>
+    </section>
+
+    <section>
+      <h3>相机机位</h3>
+      <div class="cam-grid">
+        <button data-cam="orbit" class="cam-btn active">环绕视角</button>
+        <button data-cam="close" class="cam-btn">鹈鹕特写</button>
+        <button data-cam="low" class="cam-btn">低机位</button>
+        <button data-cam="top" class="cam-btn">高空俯瞰</button>
+      </div>
+    </section>
+
+    <section>
+      <h3>操作</h3>
+      <div class="action-grid">
+        <button id="resetBtn" class="btn-ghost">
+          <svg viewBox="0 0 24 24"><path d="M4 10a8 8 0 111.6 6.4M4 10V4m0 6h6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          重置
+        </button>
+        <button id="randomBtn" class="btn-ghost">
+          <svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.5" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.5" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1.5" fill="currentColor"/></svg>
+          随机灵感
+        </button>
+        <button id="exportBtn" class="btn-ghost">
+          <svg viewBox="0 0 24 24"><path d="M12 4v11m0 0l-4-4m4 4l4-4M4 19h16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          导出 PNG
+        </button>
+      </div>
+    </section>
+
+  </div>
+</aside>
+
+<div id="stats" aria-label="骑行数据">
+  <div class="stat"><span class="stat-num" id="statSpeed">24.0</span><span class="stat-unit">km/h</span></div>
+  <div class="stat"><span class="stat-num" id="statDist">0</span><span class="stat-unit">m 里程</span></div>
+  <div class="stat"><span class="stat-num" id="statFps">60</span><span class="stat-unit">FPS</span></div>
+</div>
+
+<p id="hint">拖拽旋转 · 滚轮缩放 · 空格暂停 · B 按车铃</p>
+<div id="toast" role="status"></div>
+
+<div id="loader">
+  <div class="loader-inner">
+    <svg viewBox="0 0 48 48" class="loader-mark" aria-hidden="true">
+      <path d="M13 19c4.5-6.5 12-6.5 15-2l11 4.5-11 3c-1.5 6-9 7.5-13.5 3z" fill="#f5efe0"/>
+      <path d="M28 21.5l11 1-9.5 4.5z" fill="#ff9e2c"/>
+      <circle cx="19.5" cy="19" r="2" fill="#0e1a2b"/>
+    </svg>
+    <p>正在装配自行车…</p>
+    <div class="loader-bar"><i></i></div>
+  </div>
+</div>
+
+<div id="webglError" hidden>
+  <div>
+    <h2>无法启动 3D 场景</h2>
+    <p>当前浏览器不支持 WebGL,或显卡驱动已禁用硬件加速。请更换现代浏览器后重试。</p>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
