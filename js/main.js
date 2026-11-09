@@ -48,7 +48,7 @@ controls.maxDistance = 20;
 controls.maxPolarAngle = 1.53;
 controls.autoRotateSpeed = 0.7;
 
-const world = buildWorld(scene, renderer);
+const world = buildWorld(scene, renderer, camera);
 const bike = buildBicycle();
 scene.add(bike.group);
 const pelican = buildPelican(bike.frameMat);

@@ -76,7 +76,7 @@ function makeRayTexture() {
   return new THREE.CanvasTexture(c);
 }
 
-export function buildWorld(scene, renderer) {
+export function buildWorld(scene, renderer, camera) {
   scene.fog = new THREE.FogExp2(0x4a3a5a, 0.0126);
 
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -247,8 +247,17 @@ export function buildWorld(scene, renderer) {
   const movers = [];
   for (let i = 0; i < 12; i++) {
     const p = palmTemplate.clone();
+    const fadeMats = [];
+    const matCache = new Map();
+    p.traverse((o) => {
+      if (!o.isMesh) return;
+      let mm = matCache.get(o.material);
+      if (!mm) { mm = o.material.clone(); mm.transparent = true; matCache.set(o.material, mm); fadeMats.push(mm); }
+      o.material = mm;
+    });
+    p.userData.fadeMats = fadeMats;
     const side = i % 2 === 0 ? 1 : -1;
-    p.position.set(-70 + Math.random() * 140, 0, side > 0 ? 5.5 + Math.random() * 8 : -(2.2 + Math.random() * 3));
+    p.position.set(-70 + Math.random() * 140, 0, side > 0 ? 7.5 + Math.random() * 7 : -(3.6 + Math.random() * 2.0));
     const s = 0.9 + Math.random() * 0.8;
     p.scale.set(s, s, s);
     p.rotation.y = Math.random() * Math.PI * 2;
@@ -261,9 +270,12 @@ export function buildWorld(scene, renderer) {
   const rockMat = new THREE.MeshStandardMaterial({ color: 0x8a8578, roughness: 1 });
   for (let i = 0; i < 14; i++) {
     const isBush = i % 2 === 0;
-    const m = new THREE.Mesh(isBush ? bushGeo : rockGeo, isBush ? bushMat : rockMat);
+    const fm = (isBush ? bushMat : rockMat).clone();
+    fm.transparent = true;
+    const m = new THREE.Mesh(isBush ? bushGeo : rockGeo, fm);
+    m.userData.fadeMats = [fm];
     const side = i % 4 < 2 ? 1 : -1;
-    m.position.set(-70 + Math.random() * 140, isBush ? 0.18 : 0.1, side > 0 ? 3.8 + Math.random() * 7 : -(2.0 + Math.random() * 3));
+    m.position.set(-70 + Math.random() * 140, isBush ? 0.18 : 0.1, side > 0 ? 6.5 + Math.random() * 6 : -(3.0 + Math.random() * 2.5));
     const s = 0.5 + Math.random() * 0.9;
     m.scale.set(s * (0.8 + Math.random() * 0.6), s * 0.7, s);
     m.rotation.y = Math.random() * Math.PI;
@@ -397,9 +409,17 @@ export function buildWorld(scene, renderer) {
 
       const v = speed * 6;
       roadTex.offset.x -= (v * dt) / 15;
+      const camX = camera.position.x, camZ = camera.position.z;
+      const camDepth = Math.hypot(camX, camZ);
+      const fadeEnd = camDepth - 3.0, fadeSpan = 3.5;
       for (const m of movers) {
         m.position.x -= v * dt;
         if (m.position.x < -75) m.position.x += 150;
+        const md = Math.hypot(m.position.x - camX, m.position.z - camZ);
+        let f = (md - fadeEnd) / fadeSpan;
+        f = f < 0 ? 0 : f > 1 ? 1 : f;
+        m.visible = f > 0.02;
+        if (m.visible) for (const mat of m.userData.fadeMats) mat.opacity = f;
       }
       for (const cl of clouds) {
         cl.position.x -= (0.35 + v * 0.12) * dt;
