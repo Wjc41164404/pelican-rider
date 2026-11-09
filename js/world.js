@@ -410,14 +410,22 @@ export function buildWorld(scene, renderer, camera) {
       const v = speed * 6;
       roadTex.offset.x -= (v * dt) / 15;
       const camX = camera.position.x, camZ = camera.position.z;
-      const camDepth = Math.hypot(camX, camZ);
+      const camDepth = Math.hypot(camX, camZ) || 0.001;
       const fadeEnd = camDepth - 3.0, fadeSpan = 3.5;
+      const dirX = -camX / camDepth, dirZ = -camZ / camDepth;
       for (const m of movers) {
         m.position.x -= v * dt;
         if (m.position.x < -75) m.position.x += 150;
         const md = Math.hypot(m.position.x - camX, m.position.z - camZ);
         let f = (md - fadeEnd) / fadeSpan;
         f = f < 0 ? 0 : f > 1 ? 1 : f;
+        const along = m.position.x * dirX + m.position.z * dirZ;
+        if (along > 0) {
+          const perp = Math.hypot(m.position.x - dirX * along, m.position.z - dirZ * along);
+          let c = (perp - 1.6) / 1.6;
+          c = c < 0 ? 0 : c > 1 ? 1 : c;
+          if (c < f) f = c;
+        }
         m.visible = f > 0.02;
         if (m.visible) for (const mat of m.userData.fadeMats) mat.opacity = f;
       }
